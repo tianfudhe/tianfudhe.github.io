@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="Keywords" content="Tianfu,Blog,Resume,Personal Homepage,Harbin Institute of Technology,HIT">
+    <meta name="Description" content="Homepage of He Tianfu">
+
+	<title>Parking Exercise Game</title>
+    <script src="./static/js/jquery-3.3.1.min.js"></script>
+    <link rel="stylesheet" href="./static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./static/css/tf.css">
+    <script src="./static/js/bootstrap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+
+        canvas {
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+
+<body onload="startGame('A-suv')">
+    <canvas id="gameboard">
+    </canvas>
+    <p>
+        <span style="font-size: large; background:rgb(210,210,210)">↑</span>: forward
+        <span style="font-size: large; background:rgb(210,210,210)">↓</span>: backward
+        <span style="font-size: large; background:rgb(210,210,210)">←</span>: steering left
+        <span style="font-size: large; background:rgb(210,210,210)">→</span>: steering right
+        <span style="font-size: large; background:rgb(210,210,210)">W</span>: faster steering and movement
+        <span style="font-size: large; background:rgb(210,210,210)">S</span>: slower steering and movement
+        <span style="font-size: large; background:rgb(210,210,210)">Car</span>:
+        <select id='inp_cartype'>
+        </select>
+		<a href="./static/pdf/car.pdf"> White paper here. </a>
+    </p>
+</body>
+<script>
+    const car_params = {
+        "A-suv": [4448, 1890, 2702, 235, 50, 18, "LYNK&CO 02"],
+		"A0-suv": [4330, 1800, 2600, 215, 55, 18, "SX11"],
+		"A000": [2695, 1663, 1873, 175, 60, 15, "Smart42"],
+		"A00": [3598, 1630, 2340, 165, 60, 14, "Panda"],
+		"A": [4632, 1789, 2650, 205,55, 16, "EC7"],
+		"B": [4986, 1861, 2870, 215, 55, 17, "Borui GE"],
+    }
+
+    var L_v = 3564, W_v = 1620, S_v = 2340;
+    var W_w = 165, AD_w = 60, R_w = 14;
+    var L = S_v / 50, W = (W_v - W_w) / 50;
+    var L_f = 0.6 * (L_v - S_v) / 50, L_r = (L_v - S_v) / 50 - L_f;
+
+    var THRE_THETA = Math.PI / 60;
+    var MAX_THETA = Math.atan(1);
+    var myGamePiece;
+    var spd = 1;
+
+	for (var carType in car_params){
+	    $("#inp_cartype").append($('<option>', {
+			value: carType,
+			text: car_params[carType][6]
+		}));
+	}
+	
+    $('#inp_cartype').change(function () {
+        startGame($(this).val());
+		$("#inp_cartype").blur();
+    });
+	
+    function startGame(cartype) {
+        var tmpParam = car_params[cartype];
+        L_v = tmpParam[0]; W_v = tmpParam[1]; S_v = tmpParam[2]; W_w = tmpParam[3]; AD_w = tmpParam[4]; R_w = tmpParam[5];
+        L = S_v / 50; W = (W_v - W_w) / 50; L_f = 0.6 * (L_v - S_v) / 50; L_r = (L_v - S_v) / 50 - L_f;
+
+        delete myGamePiece;
+        myGamePiece = new CarClass(W, L, L_f, L_r, W_w, AD_w, R_w, [270, 234], myGameArea.canvas.getContext("2d"));
+        myGameArea.start();
+    }
+
+    function vec(p_a, p_b) {
+        return [p_b[0] - p_a[0], p_b[1] - p_a[1]];
+    }
+    function vecadd(p_a, p_b) {
+        return [p_b[0] + p_a[0], p_b[1] + p_a[1]];
+    }
+    function kvec(k, p_a) {
+        return [k * p_a[0], k * p_a[1]];
+    }
+    function l2norm(p_a) {
+        return Math.sqrt(p_a[0] * p_a[0] + p_a[1] * p_a[1]);
+    }
+    var myGameArea = {
+        canvas: document.getElementById("gameboard"),
+        drawSpeed: function () {
+            var ctx = this.canvas.getContext("2d");
+            ctx.save();
+            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            // ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            var stringTitle = "Speed: " + spd;
+            ctx.fillStyle = '#0000ff';
+            ctx.font = '30px sans-serif';
+            var text_title = stringTitle;
+            ctx.fillText(stringTitle, 30, 30);
+            ctx.restore();
+        },
+        start: function () {
+            this.canvas.width = 640;
+            this.canvas.height = 480;
+            this.context = this.canvas.getContext("2d");
+            this.frameNo = 0;
+
+            myGameArea.drawSpeed();
+            myGamePiece.redraw();
+
+        },
+        clear: function () {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+
+
+    window.addEventListener("keydown", function (ev) {
+        myGameArea.clear();
+        myGameArea.drawSpeed();
+        const code_left = 37;
+        const code_up = 38;
+        const code_right = 39;
+        const code_down = 40;
+        const code_w = 87;
+        const code_s = 83;
+        if (ev.keyCode == code_left) {
+            if (myGamePiece.theta > -MAX_THETA) {
+                myGamePiece.theta -= spd * Math.PI / 180;
+                myGamePiece.theta = Math.max(-MAX_THETA, myGamePiece.theta);
+            }
+            myGamePiece.redraw();
+            // console.log("theta=" + myGamePiece.theta)
+        } else if (ev.keyCode == code_right) {
+            var tmpThre = Math.atan(myGamePiece.L / (myGamePiece.W + myGamePiece.L / Math.tan(MAX_THETA)));
+            if (myGamePiece.theta < tmpThre) {
+                myGamePiece.theta += spd * Math.PI / 180;
+                myGamePiece.theta = Math.min(tmpThre, myGamePiece.theta);
+            }
+            myGamePiece.redraw();
+            // console.log("theta=" + myGamePiece.theta)
+        } else if (ev.keyCode == code_up) {
+            myGamePiece.update(spd);
+        } else if (ev.keyCode == code_down) {
+            myGamePiece.update(-spd);
+        } else if (ev.keyCode == code_w) {
+            if (spd < 10) {
+                spd++;
+            }
+            myGamePiece.redraw();
+        } else if (ev.keyCode == code_s) {
+            if (spd > 1) {
+                spd--;
+            }
+            myGamePiece.redraw();
+        }
+    });
+    class CarClass {
+        constructor(W, L, L_f, L_r, W_w, AD_w, R_w, center, ctx) {
+            this.W = W;
+            this.L = L;
+
+            this.L_f = L_f;
+            this.L_r = L_r;
+            this.W_w = W_w;
+            this.AD_w = AD_w;
+            this.R_w = R_w;
+
+            this.alpha = 0;
+            this.theta = 0;
+            this.ctx = ctx;
+
+            this.p0 = vecadd(center, [-this.W / 2, -this.L / 2]);
+            this.p1 = vecadd(center, [+this.W / 2, -this.L / 2]);
+            this.p2 = vecadd(center, [-this.W / 2, +this.L / 2]);
+            this.p3 = vecadd(center, [+this.W / 2, +this.L / 2]);
+        }
+        getUnitDir(alpha) {
+            return [Math.cos(alpha - Math.PI / 2), Math.sin(alpha - Math.PI / 2)];
+        }
+        getUnitOrthogonalDir(alpha) {
+            return [Math.cos(alpha), Math.sin(alpha)];
+        }
+        getCenter() {
+            return kvec(0.5, vecadd(this.p0, this.p3));
+        }
+        getWheelDiameter() {
+            return (2 * this.W_w / 10 * this.AD_w / 100 + this.R_w * 2.54) / 5;
+        }
+
+        redraw() {
+            function draw_rect(ctx, p_center, p_angle, p_size) {
+                ctx.save();
+                ctx.translate(p_center[0], p_center[1]);
+                ctx.rotate(p_angle);
+                ctx.strokeRect(p_size[0] / -2, p_size[1] / -2, p_size[0], p_size[1]);
+                ctx.restore();
+            }
+            // draw line barriers.
+            this.ctx.beginPath();
+            this.ctx.moveTo(230, 250);
+            this.ctx.lineTo(230, 480);
+            this.ctx.stroke();
+
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(300, 480);
+            this.ctx.lineTo(300, 420);
+            this.ctx.lineTo(350, 420);
+            this.ctx.lineTo(350, 300);
+            this.ctx.lineTo(300, 300);
+            this.ctx.lineTo(300, 200);
+            this.ctx.lineTo(400, 200);
+            this.ctx.lineTo(400, 150);
+            this.ctx.lineTo(300, 150);
+            this.ctx.lineTo(300, 0);
+            this.ctx.stroke();
+
+
+
+            // step1: draw car body
+            var tmp_center = vecadd(this.getCenter(), kvec(0.5 * (this.L_f - this.L_r), this.getUnitDir(this.alpha)));
+            var tmp_angle = this.alpha;
+            var tmp_size = [this.W + this.W_w / 10 / 5, this.L + this.L_f + this.L_r];
+            draw_rect(this.ctx, tmp_center, tmp_angle, tmp_size);
+
+            // step2: draw 4 wheels.
+            tmp_size = [this.W_w / 10 / 5, this.getWheelDiameter()];
+            tmp_center = this.p0;
+            tmp_angle = this.alpha + this.theta;
+            draw_rect(this.ctx, tmp_center, tmp_angle, tmp_size);
+
+            tmp_center = this.p1;
+            if (this.theta < THRE_THETA && this.theta > -THRE_THETA) {
+                // tmp_angle = this.alpha + this.theta;
+                tmp_angle = this.alpha;
+            } else {
+                tmp_angle = this.alpha + Math.atan(L / (L / Math.tan(this.theta) - W))
+            }
+            draw_rect(this.ctx, tmp_center, tmp_angle, tmp_size);
+
+            tmp_center = this.p2;
+            tmp_angle = this.alpha;
+            draw_rect(this.ctx, tmp_center, tmp_angle, tmp_size);
+
+            tmp_center = this.p3;
+            tmp_angle = this.alpha;
+            draw_rect(this.ctx, tmp_center, tmp_angle, tmp_size);
+        }
+        update(delta) {
+            var theta = this.theta;
+            if (theta >= THRE_THETA || theta <= -THRE_THETA) {
+                var p0p2 = vec(this.p0, this.p2),
+                    p2p3 = vec(this.p2, this.p3),
+                    p2p0 = vec(this.p2, this.p0);
+
+                var c = vecadd(this.p0, vecadd(
+                    p0p2,
+                    kvec(L / W / Math.tan(theta), p2p3)
+                ));
+
+                var beta = delta / (2 * Math.PI * (L / Math.tan(theta) - W));
+
+                var cp2 = vec(c, this.p2), cp3 = vec(c, this.p3);
+                var new_p2 = vecadd(c, vecadd(
+                    kvec(Math.cos(beta), cp2),
+                    kvec(Math.sin(beta) / Math.tan(theta), p2p0)
+                ));
+                var new_p3 = vecadd(c, vecadd(
+                    kvec(Math.cos(beta), cp3),
+                    kvec((L / Math.tan(theta) - W) / L * Math.sin(beta), p2p0)
+                ));
+
+                var new_p2p3 = vec(new_p2, new_p3);
+                var new_alpha = Math.acos(new_p2p3[0] / l2norm(new_p2p3));
+                if (new_p2p3[1] < 0) {
+                    new_alpha = 2 * Math.PI - new_alpha;
+                }
+
+                var unitDir = this.getUnitDir(new_alpha);
+                var new_p0 = vecadd(new_p2, kvec(L, unitDir));
+                var new_p1 = vecadd(new_p0, new_p2p3);
+
+                this.alpha = new_alpha;
+                this.p0 = new_p0;
+                this.p1 = new_p1;
+
+                this.p2 = new_p2;
+                this.p3 = new_p3;
+            } else {
+                var unitDir = this.getUnitDir(this.alpha);
+                this.p0 = vecadd(this.p0, kvec(delta, unitDir));
+                this.p1 = vecadd(this.p1, kvec(delta, unitDir));
+                this.p2 = vecadd(this.p2, kvec(delta, unitDir));
+                this.p3 = vecadd(this.p3, kvec(delta, unitDir));
+            }
+            this.redraw();
+        }
+    }
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGamePiece.update(3, Math.PI / 8);
+    }
+
+</script>
+
+</html>

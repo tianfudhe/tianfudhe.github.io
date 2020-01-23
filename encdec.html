@@ -1,0 +1,119 @@
+<html>
+
+<head>
+  <meta name="Description" content="Homepage of He Tianfu">
+  <script type="text/javascript" src="./static/js/core-min.js"></script>
+  <script type="text/javascript" src="./static/js/aes.js"></script>
+  <script type="text/javascript" src="./static/js/tripledes.js"></script>
+  <script type="text/javascript" src="./static/js/rabbit.js"></script>
+  <script type="text/javascript" src="./static/js/rc4.js"></script>
+  <script type="text/javascript" src="./static/js/jquery-3.3.1.min.js"></script>
+  <link rel="stylesheet" href="./static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./static/css/tf.css">
+  <script src="./static/js/bootstrap.min.js"></script>
+
+  <style type="text/css">
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 class="display-4" style="border-bottom: grey; border-bottom-width: 1px; border-bottom-style:solid">Encryption-Decryption Tool</h1>
+    <p>
+      I find this tool helpful encrypting some secure texts such as credit card numbers. A common scenario is:
+      <br>
+      <span style="font-style: italic">
+        &nbsp&nbsp&nbsp&nbspWhen you are not willing to remember the massive bank card numbers,
+        <span style="color:red;">NEITHER</span> to write down plain text to online notes considering the security,
+        then just remember 2 or 3 chars of <code>key</code> for encryption/decryption.
+      </span>
+    </p>
+    </span>
+    <div class="row clearfix">
+      <div class="col-md-12">
+        <textarea class="form-control" placeholder="Original text here..." id="msg_source" rows=7></textarea>
+      </div>
+    </div>
+
+    <div class="input-group" style="margin-top: 20px; margin-bottom: 20px; width:80%; margin-left: auto; margin-right: auto;">
+      <select class="custom-select" id="algo">
+        <option value="aes">AES</option>
+        <option value="des">DES</option>
+        <option value="rc4">RC4</option>
+        <option value="rabbit">Rabbit</option>
+        <option value="tripledes">3-DES</option>
+      </select>
+      <div class="input-group-append" style="width:70%">
+        <input class="form-control" placeholder="Crypto key here..." id="pwd">
+        <button class="btn btn-info" onclick="javascript:encrypt();">Encrypt</button>
+        <button class="btn btn-info" onclick="javascript:decrypt();">Decrypt</button>
+      </div>
+    </div>
+
+    <div class="row clearfix">
+      <div class="col-md-12">
+        <textarea class="form-control" placeholder="Cipher text here..." id="encrypt_result" rows=7></textarea>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="container">
+      <p>
+        <a href="./index.html">返回首页</a>
+      </p>
+      <div id="disqus_thread" style="margin: 20px"></div>
+    </div>
+  </footer>
+  <script src="./static/js/disqus.js"></script>
+</body>
+
+
+
+<script type="text/javascript">
+  function encrypt() {
+    setTimeout(() => {
+      switch ($('#algo').find(":selected").val()) {
+        case "aes":
+          $("#encrypt_result").val(CryptoJS.AES.encrypt($("#msg_source").val(), $("#pwd").val()));
+          break;
+        case "des":
+          $("#encrypt_result").val(CryptoJS.DES.encrypt($("#msg_source").val(), $("#pwd").val()));
+          break;
+        case "rabbit":
+          $("#encrypt_result").val(CryptoJS.Rabbit.encrypt($("#msg_source").val(), $("#pwd").val()));
+          break;
+        case "rc4":
+          $("#encrypt_result").val(CryptoJS.RC4.encrypt($("#msg_source").val(), $("#pwd").val()));
+          break;
+        case "tripledes":
+          $("#encrypt_result").val(CryptoJS.TripleDES.encrypt($("#msg_source").val(), $("#pwd").val()));
+          break;
+      }
+    }, 300);
+    $("#encrypt_result").val("");
+  }
+  function decrypt() {
+    setTimeout(() => {
+      switch ($('#algo').find(":selected").val()) {
+        case "aes":
+          $("#msg_source").val(CryptoJS.AES.decrypt($("#encrypt_result").val(), $("#pwd").val()).toString(CryptoJS.enc.Utf8));
+          break;
+        case "des":
+          $("#msg_source").val(CryptoJS.DES.decrypt($("#encrypt_result").val(), $("#pwd").val()).toString(CryptoJS.enc.Utf8));
+          break;
+        case "rabbit":
+          $("#msg_source").val(CryptoJS.Rabbit.decrypt($("#encrypt_result").val(), $("#pwd").val()).toString(CryptoJS.enc.Utf8));
+          break;
+        case "rc4":
+          $("#msg_source").val(CryptoJS.RC4.decrypt($("#encrypt_result").val(), $("#pwd").val()).toString(CryptoJS.enc.Utf8));
+          break;
+        case "tripledes":
+          $("#msg_source").val(CryptoJS.TripleDES.decrypt($("#encrypt_result").val(), $("#pwd").val()).toString(CryptoJS.enc.Utf8));
+          break;
+      }
+    }, 300);
+    $("#msg_source").val("");
+  }
+</script>
+
+</html>
