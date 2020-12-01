@@ -1,0 +1,65 @@
+<html>
+
+<head>
+  <meta name="Description" content="Homepage of He Tianfu">
+  <script type="text/javascript" src="./static/js/jquery-3.3.1.min.js"></script>
+  <link rel="stylesheet" href="./static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./static/css/tf.css">
+  <script src="./static/js/bootstrap.min.js"></script>
+
+  <style type="text/css">
+  </style>
+</head>
+
+<body>
+  <div class="container">
+	<textarea class="form-control" placeholder="lat1,lon1;lat2,lng2" id="s_input" rows=7></textarea>
+	<button onclick="show_dis()">计算距离</button>
+	<div>距离是<span id='dis_res'></span>公里</div>
+  </div>
+  <footer>
+    <div class="container">
+      <p>
+        <a href="./index.html">返回首页</a>
+      </p>
+      <div id="disqus_thread" style="margin: 20px"></div>
+    </div>
+  </footer>
+  <script src="./static/js/disqus.js"></script>
+</body>
+
+
+
+<script type="text/javascript">
+	function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+	  var R = 6371; // Radius of the earth in km
+	  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+	  var dLon = deg2rad(lon2-lon1); 
+	  var a = 
+		Math.sin(dLat/2) * Math.sin(dLat/2) +
+		Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+		Math.sin(dLon/2) * Math.sin(dLon/2)
+		; 
+	  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+	  var d = R * c; // Distance in km
+	  return d;
+	}
+
+	function deg2rad(deg) {
+	  return deg * (Math.PI/180)
+	}
+	function show_dis() {
+		var s=$('#s_input').val();
+		let [latlng1,latlng2] = s.split(';')
+		let [lat1, lng1] = latlng1.split(',')
+		let [lat2, lng2] = latlng2.split(',')
+		lat1 = parseFloat(lat1)
+		lat2 = parseFloat(lat2)
+		lng1 = parseFloat(lng1)
+		lng2 = parseFloat(lng2)
+		tmpdis = getDistanceFromLatLonInKm(lat1, lng1, lat2, lng2)
+		$('#dis_res').html(tmpdis)
+	}
+</script>
+
+</html>
